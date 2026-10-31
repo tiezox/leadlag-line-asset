@@ -3,23 +3,21 @@
 Claude Code がどのリポジトリで動くときにも守る、共通の決まりを置くリポジトリである。
 ローカルの `~/.claude/` にあった古い規律のうち、今も正しく、特定の仕組みに縛られないものだけを選んで移した(261031)。
 
-## 読み込まれ方
+## 読み込まれ方と自動同期
 
-各プロジェクトのリポジトリの `.claude/rules/common/` にこのリポジトリの中身を置くと、Claude Code がそのプロジェクトで起動するたびに全ファイルを読み込む。ローカルの PC でもクラウドのセッションでも同じように効く。リポジトリに入っているファイルだけが読み込まれ、ローカルの `~/.claude/` は使わない。
+Claude Code はリポジトリの中にあるファイルしか読まないので、共通ルールは各リポジトリの `.claude/rules/common/` にコピーとして置く。コピーは次の2つの仕組みで自動的に最新に保たれる。ユーザーが手で何かを打つ必要はない。
 
-## 取り込み方(git subtree)
+- **クラウドのセッション向け**: このリポジトリの `*.md` が master に push されると、GitHub Actions `sync.yml` が `sync_targets.txt` に挙げた各リポジトリの `.claude/rules/common/` を同じ内容に書き換えて push する。クラウドのセッションは毎回 GitHub から取ってくるので、次の新規セッションから反映される。
+- **この PC で開くセッション向け**: 共通ルール `session_start.md` が「作業の最初に `git pull --ff-only` で最新を取り込む」と定めているので、各セッションが自分で最新のコピーを取り込む。PC 側に cron や clone は置かない。GitHub 側だけで完結させ、PC の状態に依存しないためである。
 
-初回:
+### 新しいリポジトリを対象に加えるとき
 
-```bash
-git subtree add --prefix=.claude/rules/common https://github.com/tiezox/claude-common-rules.git master --squash
-```
+`sync_targets.txt` に `owner/repo` を1行足して push する。次回の同期から自動で入る。
 
-更新を取り込む:
+### 必要な設定
 
-```bash
-git subtree pull --prefix=.claude/rules/common https://github.com/tiezox/claude-common-rules.git master --squash
-```
+- Secrets `SYNC_TOKEN`: Fine-grained の個人アクセストークン。対象リポジトリに限定し、権限は Contents の Read and write だけにする。
+- GitHub Actions の実行先は GitHub 側のサーバー(`ubuntu-latest`)に固定する。PC が止まっていても同期が走るようにするためで、self-hosted runner には切り替えない。
 
 ## 書き方
 
